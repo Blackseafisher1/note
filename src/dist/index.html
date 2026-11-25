@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notes</title>
   
-<link rel="stylesheet" crossorigin href="./index-jjbj9k6s.css"><script type="module" crossorigin src="./index-r5n36f5t.js"></script></head>
+<link rel="stylesheet" crossorigin href="./index-j5ra3863.css"><script type="module" crossorigin src="./index-eghjt4aw.js"></script></head>
 <body>
   <div class="split-con">
     <div class="left-p" id="leftPane">
@@ -31,10 +31,12 @@
         spellcheck="false"
         hidden
       ></div>
+      <div class="markdown-preview" id="markdownPreview" hidden></div>
       <div class="status-bar">
         <span class="cursor-status" id="cursorStatus">Ln 1, Col 1</span>
         <span class="syntax-status" id="syntaxStatus" aria-live="polite"></span>
         <span class="save-status" id="saveStatus" aria-live="polite">Saved</span>
+        <button type="button" class="new-btn markdown-preview-btn" id="markdownPreviewBtn" hidden>Preview</button>
         <button type="button" class="new-btn run-js-btn" id="runJsBtn" hidden>Run JS</button>
       </div>
     </div>
@@ -65,6 +67,14 @@
         <option value="jetbrains">JetBrains Mono</option>
       </select>
     </label>
+    <label class="settings-field" for="caretType">
+      <span>Caret type</span>
+      <select id="caretType">
+        <option value="block">Block</option>
+        <option value="bar">Bar</option>
+      </select>
+    </label>
+    <p class="settings-hint">Block caret styling is supported in Chromium-based browsers.</p>
     <label class="settings-field" for="saveDelaySeconds">
       <span>Auto-save delay (seconds)</span>
       <input type="number" id="saveDelaySeconds" min="0" max="86400" step="1">
@@ -74,6 +84,7 @@
 
   <div class="ctx-menu" id="ctxMenu"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
   
 </body>
 </html>

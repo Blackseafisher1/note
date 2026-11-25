@@ -59,6 +59,7 @@ var DEFAULT_FILE = "tmp";
 var DEFAULT_SAVE_DELAY_SECONDS = 5;
 var MAX_SAVE_DELAY_SECONDS = 86400;
 var DEFAULT_LEFT_PANE_WIDTH = 220;
+var DEFAULT_CARET_TYPE = "block";
 var container = document.querySelector(".split-con");
 var leftPane = document.getElementById("leftPane");
 var editorWrap = document.querySelector(".editor-wrap");
@@ -68,6 +69,8 @@ var saveStatusEl = document.getElementById("saveStatus");
 var cursorStatusEl = document.getElementById("cursorStatus");
 var syntaxStatusEl = document.getElementById("syntaxStatus");
 var lineGutterLines = document.getElementById("lineGutterLines");
+var markdownPreview = document.getElementById("markdownPreview");
+var markdownPreviewBtn = document.getElementById("markdownPreviewBtn");
 var runJsBtn = document.getElementById("runJsBtn");
 var strip = document.getElementById("dragStrip");
 var fileListEl = document.getElementById("fileList");
@@ -79,6 +82,7 @@ var settingsCloseBtn = document.getElementById("settingsCloseBtn");
 var darkThemeToggle = document.getElementById("darkThemeToggle");
 var lineNumbersToggle = document.getElementById("lineNumbersToggle");
 var editorFontSelect = document.getElementById("editorFont");
+var caretTypeSelect = document.getElementById("caretType");
 var saveDelayInput = document.getElementById("saveDelaySeconds");
 var ctxMenu = document.getElementById("ctxMenu");
 var appReady = false;
@@ -96,14 +100,17 @@ function clampLeftPaneWidth(width) {
   const maxLeft = Math.max(minLeft, availableWidth - minRight);
   return Math.max(minLeft, Math.min(width, maxLeft));
 }
-strip.addEventListener("mousedown", (e) => {
+strip.addEventListener("pointerdown", (e) => {
+  if (e.pointerType === "mouse" && e.button !== 0)
+    return;
   e.preventDefault();
   dragging = true;
   strip.classList.add("active");
   document.body.style.cursor = "col-resize";
   document.body.style.userSelect = "none";
+  strip.setPointerCapture(e.pointerId);
 });
-document.addEventListener("mousemove", (e) => {
+document.addEventListener("pointermove", (e) => {
   if (!dragging)
     return;
   const rawWidth = e.clientX - container.getBoundingClientRect().left;
@@ -111,21 +118,23 @@ document.addEventListener("mousemove", (e) => {
   leftPane.style.width = `${clampedWidth}px`;
   syncStrip();
 });
-document.addEventListener("mouseup", () => {
+function finishPaneResize() {
+  if (!dragging)
+    return;
+  dragging = false;
+  strip.classList.remove("active");
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
   if (!appReady)
     return;
-  if (dragging) {
-    dragging = false;
-    strip.classList.remove("active");
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }
   const width = leftPane.offsetWidth;
   if (state.leftPaneWidth !== width) {
     state.leftPaneWidth = width;
     persistAll();
   }
-});
+}
+document.addEventListener("pointerup", finishPaneResize);
+document.addEventListener("pointercancel", finishPaneResize);
 new ResizeObserver(syncStrip).observe(leftPane);
 window.addEventListener("resize", syncStrip);
 syncStrip();
@@ -210,7 +219,7 @@ function highlightInlineMarkdown(rawLine) {
   }
   return html + escapeHtml(rawLine.slice(cursor));
 }
-function renderMarkdownHtml(rawText) {
+function renderMarkdownSourceHtml(rawText) {
   const lines = rawText.split(`
 `);
   let fence = null;
@@ -281,6 +290,124 @@ function renderMarkdownHtml(rawText) {
   return htmlLines.join(`
 `);
 }
+function getMarkdownFoldRanges(source) {
+  const headings = [];
+  const lines = source.split(`
+`);
+  let fence = null;
+  lines.forEach((line, index) => {
+    if (fence) {
+      const closeMatch = line.match(/^\s*(`+|~+)\s*$/);
+      if (closeMatch && closeMatch[1][0] === fence.marker && closeMatch[1].length >= fence.length) {
+        fence = null;
+      }
+      return;
+    }
+    const openMatch = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+    if (openMatch) {
+      fence = { marker: openMatch[1][0], length: openMatch[1].length };
+      return;
+    }
+    const headingMatch = line.match(/^\s{0,3}(#{1,6})(?:[ \t]+|$)/);
+    if (headingMatch)
+      headings.push({ line: index + 1, level: headingMatch[1].length });
+  });
+  const ranges = new Map;
+  const parents = [];
+  const lastVisibleLine = lines.length;
+  for (const heading of headings) {
+    while (parents.length > 0 && parents[parents.length - 1].level >= heading.level) {
+      const parent = parents.pop();
+      if (heading.line > parent.line + 1)
+        ranges.set(parent.line, heading.line);
+    }
+    parents.push(heading);
+  }
+  while (parents.length > 0) {
+    const heading = parents.pop();
+    if (lastVisibleLine > heading.line + 1)
+      ranges.set(heading.line, lastVisibleLine);
+  }
+  return ranges;
+}
+function renderMarkdownHtml(rawText) {
+  const template = document.createElement("template");
+  template.innerHTML = marked.parse(rawText, { gfm: true, breaks: false });
+  const allowedTags = new Set([
+    "A",
+    "BLOCKQUOTE",
+    "BR",
+    "CODE",
+    "DEL",
+    "EM",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+    "HR",
+    "IMG",
+    "INPUT",
+    "LI",
+    "OL",
+    "P",
+    "PRE",
+    "S",
+    "STRONG",
+    "TABLE",
+    "TBODY",
+    "TD",
+    "TH",
+    "THEAD",
+    "TR",
+    "UL"
+  ]);
+  const allowedAttributes = new Set([
+    "alt",
+    "checked",
+    "class",
+    "disabled",
+    "href",
+    "id",
+    "start",
+    "src",
+    "title",
+    "type"
+  ]);
+  for (const element of Array.from(template.content.querySelectorAll("*"))) {
+    if (!allowedTags.has(element.tagName)) {
+      element.remove();
+      continue;
+    }
+    for (const attribute of Array.from(element.attributes)) {
+      if (!allowedAttributes.has(attribute.name.toLowerCase())) {
+        element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (attribute.name === "href" || attribute.name === "src") {
+        try {
+          const protocol = new URL(attribute.value, document.baseURI).protocol;
+          const safeProtocols = attribute.name === "href" ? ["http:", "https:", "mailto:"] : ["http:", "https:"];
+          if (!safeProtocols.includes(protocol))
+            element.removeAttribute(attribute.name);
+        } catch {
+          element.removeAttribute(attribute.name);
+        }
+      }
+    }
+    if (element.tagName === "INPUT") {
+      element.setAttribute("type", "checkbox");
+      element.setAttribute("disabled", "");
+    }
+  }
+  template.content.querySelectorAll("pre code").forEach((code) => {
+    const languageClass = Array.from(code.classList).find((className) => className.startsWith("language-"));
+    const languageName = languageClass?.slice("language-".length);
+    code.innerHTML = highlightCode(code.textContent ?? "", languageName);
+  });
+  return template.innerHTML;
+}
 function loadSyntaxConfig() {
   fetch("./syntax-highlighting.json").then((response) => {
     if (!response.ok)
@@ -318,6 +445,7 @@ var AUTO_CLOSE_PAIRS = {
   '"': '"',
   "`": "`"
 };
+var STRUCTURAL_OPENERS = new Set(["(", "[", "{"]);
 function getSelectionCharacterOffsets(element) {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0)
@@ -325,6 +453,12 @@ function getSelectionCharacterOffsets(element) {
   const range = selection.getRangeAt(0);
   if (!element.contains(range.commonAncestorContainer))
     return { start: 0, end: 0 };
+  if (activeMode !== "textarea" && element === richEditor) {
+    return {
+      start: getCodePointOffset(element, range.startContainer, range.startOffset),
+      end: getCodePointOffset(element, range.endContainer, range.endOffset)
+    };
+  }
   const startRange = range.cloneRange();
   startRange.selectNodeContents(element);
   startRange.setEnd(range.startContainer, range.startOffset);
@@ -336,7 +470,59 @@ function getSelectionCharacterOffsets(element) {
 function getCaretCharacterOffset(element) {
   return getSelectionCharacterOffsets(element).end;
 }
+function getCodeLines(element) {
+  return Array.from(element.children).filter((child) => child.classList.contains("code-line"));
+}
+function getCodePointOffset(element, node, nodeOffset) {
+  const lineElement = node instanceof Element ? node.closest(".code-line") : node.parentElement?.closest(".code-line");
+  if (!lineElement || !element.contains(lineElement))
+    return 0;
+  const lines = getCodeLines(element);
+  const lineIndex = lines.indexOf(lineElement);
+  if (lineIndex < 0)
+    return 0;
+  const range = document.createRange();
+  range.selectNodeContents(lineElement);
+  range.setEnd(node, nodeOffset);
+  const lineOffset = range.toString().length;
+  const precedingLength = lines.slice(0, lineIndex).reduce((length, line) => length + (line.textContent?.length ?? 0) + 1, 0);
+  return precedingLength + lineOffset;
+}
 function getTextPosition(element, targetOffset) {
+  if (activeMode !== "textarea" && element === richEditor) {
+    const lines = getCodeLines(element);
+    let remaining = targetOffset;
+    for (const line of lines) {
+      const lineLength = line.textContent?.length ?? 0;
+      if (remaining <= lineLength) {
+        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+        let currentNode = walker.nextNode();
+        if (!currentNode)
+          return { node: line, offset: 0 };
+        while (currentNode) {
+          const length = currentNode.nodeValue?.length ?? 0;
+          if (remaining <= length)
+            return { node: currentNode, offset: remaining };
+          remaining -= length;
+          currentNode = walker.nextNode();
+        }
+        return { node: line, offset: line.childNodes.length };
+      }
+      remaining -= lineLength + 1;
+    }
+    const lastLine = lines[lines.length - 1];
+    if (lastLine) {
+      const walker = document.createTreeWalker(lastLine, NodeFilter.SHOW_TEXT);
+      let lastNode = null;
+      let currentNode = walker.nextNode();
+      while (currentNode) {
+        lastNode = currentNode;
+        currentNode = walker.nextNode();
+      }
+      return lastNode ? { node: lastNode, offset: lastNode.length } : { node: lastLine, offset: lastLine.childNodes.length };
+    }
+    return null;
+  }
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let remaining = targetOffset;
   let currentNode = walker.nextNode();
@@ -404,18 +590,22 @@ function getPairedEdit(text, start, end, key) {
   };
 }
 function getEnterEdit(text, start, end) {
+  if (start !== end)
+    return null;
   const opener = text[start - 1];
   const closer = AUTO_CLOSE_PAIRS[opener];
-  if (start !== end || !closer || text[end] !== closer)
-    return null;
   const lineStart = text.lastIndexOf(`
 `, start - 1) + 1;
   const linePrefix = text.slice(lineStart, start);
   const baseIndent = linePrefix.match(/^[\t ]*/)?.[0] ?? "";
-  const innerIndent = `${baseIndent}  `;
-  const insertion = `
+  const isBetweenPair = STRUCTURAL_OPENERS.has(opener) && closer !== undefined && text[end] === closer;
+  if (!isBetweenPair && baseIndent.length === 0)
+    return null;
+  const innerIndent = isBetweenPair ? `${baseIndent}  ` : baseIndent;
+  const insertion = isBetweenPair ? `
 ${innerIndent}
-${baseIndent}`;
+${baseIndent}` : `
+${innerIndent}`;
   const caret = start + 1 + innerIndent.length;
   return {
     text: text.slice(0, start) + insertion + text.slice(end),
@@ -425,38 +615,190 @@ ${baseIndent}`;
   };
 }
 var activeMode = "textarea";
+var foldedLineStarts = new Set;
+var markdownPreviewMode = false;
 function getEditorValue() {
   if (activeMode !== "textarea") {
-    return (richEditor.textContent ?? "").replace(/\r\n/g, `
+    return Array.from(richEditor.children).filter((child) => child.classList.contains("code-line")).map((line) => line.textContent ?? "").join(`
 `);
   }
   return textEditor.value;
 }
-function renderRichEditorHtml(rawText) {
-  if (activeMode === "markdown")
-    return renderMarkdownHtml(rawText);
+function getCodeFoldRanges(source, languageName) {
+  const ranges = new Map;
+  const stack = [];
+  let line = 1;
+  let quote = "";
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let index = 0;index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1];
+    if (character === `
+`) {
+      line += 1;
+      lineComment = false;
+      if (quote && quote !== "`")
+        quote = "";
+      escaped = false;
+      continue;
+    }
+    if (lineComment)
+      continue;
+    if (blockComment) {
+      if (character === "*" && next === "/") {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped)
+        escaped = false;
+      else if (character === "\\")
+        escaped = true;
+      else if (character === quote)
+        quote = "";
+      continue;
+    }
+    if (character === "/" && next === "/") {
+      lineComment = true;
+      index += 1;
+    } else if (character === "/" && next === "*") {
+      blockComment = true;
+      index += 1;
+    } else if (languageName === "sql" && character === "-" && next === "-" || languageName === "python" && character === "#") {
+      lineComment = true;
+      if (character === "-")
+        index += 1;
+    } else if (character === "'" || character === '"' || character === "`") {
+      quote = character;
+    } else if (character === "{") {
+      stack.push(line);
+    } else if (character === "}") {
+      const startLine = stack.pop();
+      if (startLine !== undefined && line > startLine)
+        ranges.set(startLine, line);
+    }
+  }
+  return ranges;
+}
+function renderFoldableLines(source, highlightedHtml, foldRanges) {
+  const template = document.createElement("template");
+  template.innerHTML = highlightedHtml;
+  const sourceLines = source.split(`
+`);
+  const codeLines = sourceLines.map((_, index) => {
+    const line = document.createElement("span");
+    line.className = "code-line";
+    line.dataset.line = String(index + 1);
+    return line;
+  });
+  let lineIndex = 0;
+  const appendText = (text, ancestors) => {
+    const destination = codeLines[lineIndex];
+    if (!destination || !text)
+      return;
+    let parent = destination;
+    for (const ancestor of ancestors) {
+      const clone = ancestor.cloneNode(false);
+      parent.appendChild(clone);
+      parent = clone;
+    }
+    parent.appendChild(document.createTextNode(text));
+  };
+  const visit = (node, ancestors) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const segments = (node.nodeValue ?? "").split(`
+`);
+      segments.forEach((segment, index) => {
+        appendText(segment, ancestors);
+        if (index < segments.length - 1)
+          lineIndex += 1;
+      });
+      return;
+    }
+    if (node instanceof HTMLElement) {
+      const nextAncestors = [...ancestors, node];
+      node.childNodes.forEach((child) => visit(child, nextAncestors));
+    }
+  };
+  template.content.childNodes.forEach((node) => visit(node, []));
+  for (const startLine of foldedLineStarts) {
+    const endLine = foldRanges.get(startLine);
+    if (endLine === undefined)
+      continue;
+    for (let line = startLine + 1;line < endLine; line += 1) {
+      codeLines[line - 1].classList.add("folded-code-line");
+    }
+    const placeholder = document.createElement("span");
+    placeholder.className = "fold-placeholder";
+    placeholder.setAttribute("aria-hidden", "true");
+    codeLines[startLine - 1].appendChild(placeholder);
+  }
+  return codeLines.map((line) => line.outerHTML).join("");
+}
+function renderFoldableCode(source, languageName) {
+  const normalizedSource = source.replace(/\r\n/g, `
+`);
+  return renderFoldableLines(normalizedSource, highlightCode(normalizedSource, languageName), getCodeFoldRanges(normalizedSource, languageName));
+}
+function getActiveLanguageName() {
   const baseName = state.active.split("/").pop() || "";
   const extension = baseName.includes(".") ? baseName.slice(baseName.lastIndexOf(".") + 1) : "";
-  return highlightCode(rawText, findSyntaxLanguage(extension)?.id);
+  return findSyntaxLanguage(extension)?.id;
+}
+function renderRichEditorHtml(rawText) {
+  if (activeMode === "markdown") {
+    const source = rawText.replace(/\r\n/g, `
+`);
+    return renderFoldableLines(source, renderMarkdownSourceHtml(source), getMarkdownFoldRanges(source));
+  }
+  return renderFoldableCode(rawText, getActiveLanguageName());
 }
 function setEditorForFile(filePath, content) {
   activeMode = detectEditorMode(filePath);
-  const spellcheck = activeMode === "markdown";
-  textEditor.spellcheck = spellcheck;
-  richEditor.spellcheck = spellcheck;
+  markdownPreviewMode = false;
+  textEditor.spellcheck = activeMode === "textarea";
   if (activeMode !== "textarea") {
     textEditor.hidden = true;
-    richEditor.hidden = false;
+    richEditor.hidden = markdownPreviewMode;
+    foldedLineStarts = new Set;
     richEditor.innerHTML = renderRichEditorHtml(content);
+    markdownPreview.hidden = !markdownPreviewMode;
+    if (markdownPreviewMode)
+      markdownPreview.innerHTML = renderMarkdownHtml(content);
   } else {
     richEditor.hidden = true;
+    markdownPreview.hidden = true;
     textEditor.hidden = false;
     textEditor.value = content;
+  }
+  editorWrap.classList.toggle("markdown-preview-mode", markdownPreviewMode);
+  editorWrap.classList.toggle("markdown-source", activeMode === "markdown" && !markdownPreviewMode);
+  refreshEditorStatus();
+}
+function setMarkdownPreview(showPreview) {
+  if (activeMode !== "markdown")
+    return;
+  markdownPreviewMode = showPreview;
+  editorWrap.classList.toggle("markdown-preview-mode", showPreview);
+  editorWrap.classList.toggle("markdown-source", !showPreview);
+  markdownPreview.hidden = !showPreview;
+  richEditor.hidden = showPreview;
+  markdownPreviewBtn.textContent = showPreview ? "Edit" : "Preview";
+  if (showPreview) {
+    markdownPreview.innerHTML = renderMarkdownHtml(getEditorValue());
+  } else {
+    richEditor.focus();
   }
   refreshEditorStatus();
 }
 function focusActiveEditor() {
-  if (activeMode !== "textarea") {
+  if (activeMode === "markdown" && markdownPreviewMode) {
+    setMarkdownPreview(false);
+  } else if (activeMode !== "textarea") {
     richEditor.focus();
   } else {
     textEditor.focus();
@@ -492,7 +834,8 @@ function loadState(raw) {
     darkTheme: false,
     saveDelaySeconds: DEFAULT_SAVE_DELAY_SECONDS,
     lineNumbers: false,
-    editorFont: "system"
+    editorFont: "system",
+    caretType: DEFAULT_CARET_TYPE
   };
   if (isRecord(raw) && isRecord(raw.files)) {
     const files = { [DEFAULT_FILE]: "" };
@@ -516,7 +859,8 @@ function loadState(raw) {
       darkTheme: raw.darkTheme === true,
       saveDelaySeconds: typeof raw.saveDelaySeconds === "number" && Number.isInteger(raw.saveDelaySeconds) && raw.saveDelaySeconds >= 0 && raw.saveDelaySeconds <= MAX_SAVE_DELAY_SECONDS ? raw.saveDelaySeconds : DEFAULT_SAVE_DELAY_SECONDS,
       lineNumbers: raw.lineNumbers === true,
-      editorFont: raw.editorFont === "jetbrains" ? "jetbrains" : "system"
+      editorFont: raw.editorFont === "jetbrains" ? "jetbrains" : "system",
+      caretType: raw.caretType === "bar" ? "bar" : DEFAULT_CARET_TYPE
     };
   }
   const hashFile = getFileFromHash();
@@ -654,8 +998,10 @@ function isJavaScriptFile() {
 function applyEditorSettings() {
   editorWrap.classList.toggle("line-numbers", state.lineNumbers);
   editorWrap.style.setProperty("--editor-font", state.editorFont === "jetbrains" ? '"JetBrains Mono", ui-monospace, monospace' : "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace");
+  editorWrap.style.setProperty("--editor-caret-shape", state.caretType);
   lineNumbersToggle.checked = state.lineNumbers;
   editorFontSelect.value = state.editorFont;
+  caretTypeSelect.value = state.caretType;
   refreshEditorStatus();
 }
 function getCaretOffset() {
@@ -675,22 +1021,53 @@ function updateLineGutter(errorLine, errorMessage) {
   const source = getEditorValue();
   const lineCount = source.split(`
 `).length;
+  const foldRanges = activeMode === "code" ? getCodeFoldRanges(source, getActiveLanguageName()) : activeMode === "markdown" ? getMarkdownFoldRanges(source) : new Map;
+  const hiddenGutterLines = new Set;
+  for (const foldedLine of foldedLineStarts) {
+    const endLine = foldRanges.get(foldedLine);
+    if (endLine === undefined) {
+      foldedLineStarts.delete(foldedLine);
+      continue;
+    }
+    for (let line = foldedLine + 1;line < endLine; line += 1) {
+      hiddenGutterLines.add(line);
+    }
+  }
   const fragment = document.createDocumentFragment();
   for (let line = 1;line <= lineCount; line += 1) {
+    if (hiddenGutterLines.has(line))
+      continue;
     const lineElement = document.createElement("div");
     lineElement.className = line === errorLine ? "gutter-line error-line" : "gutter-line";
-    lineElement.textContent = String(line);
     if (line === errorLine && errorMessage)
       lineElement.title = errorMessage;
+    const foldToggle = document.createElement("button");
+    foldToggle.type = "button";
+    foldToggle.className = "fold-toggle";
+    foldToggle.dataset.foldLine = String(line);
+    foldToggle.disabled = !foldRanges.has(line);
+    foldToggle.textContent = foldedLineStarts.has(line) ? "+" : foldRanges.has(line) ? "-" : "";
+    foldToggle.setAttribute("aria-label", foldedLineStarts.has(line) ? `Expand lines from ${line}` : `Fold lines from ${line}`);
+    lineElement.appendChild(foldToggle);
+    const lineNumber = document.createElement("span");
+    lineNumber.className = "gutter-number";
+    lineNumber.textContent = String(line);
+    lineElement.appendChild(lineNumber);
     fragment.appendChild(lineElement);
   }
   lineGutterLines.replaceChildren(fragment);
+  editorWrap.classList.toggle("code-folding", activeMode === "code" || activeMode === "markdown");
   const activeEditor = activeMode === "textarea" ? textEditor : richEditor;
   lineGutterLines.style.transform = `translateY(${-activeEditor.scrollTop}px)`;
 }
 function refreshEditorStatus() {
+  editorWrap.classList.toggle("code-folding", activeMode === "code" || activeMode === "markdown");
+  editorWrap.classList.toggle("markdown-preview-mode", activeMode === "markdown" && markdownPreviewMode);
+  editorWrap.classList.toggle("markdown-source", activeMode === "markdown" && !markdownPreviewMode);
   const isJavaScript = isJavaScriptFile();
   runJsBtn.hidden = !isJavaScript;
+  markdownPreviewBtn.hidden = activeMode !== "markdown";
+  markdownPreviewBtn.textContent = markdownPreviewMode ? "Edit" : "Preview";
   syntaxStatusEl.classList.remove("valid");
   let errorLine = null;
   let errorMessage = null;
@@ -765,7 +1142,8 @@ function persistAll(showSavedStatus = false) {
     darkTheme: state.darkTheme,
     saveDelaySeconds: state.saveDelaySeconds,
     lineNumbers: state.lineNumbers,
-    editorFont: state.editorFont
+    editorFont: state.editorFont,
+    caretType: state.caretType
   };
   persistenceQueue = persistenceQueue.then(() => writeStorage(STORAGE_KEY, snapshot)).then(() => {
     const hadStorageError = storageError !== null;
@@ -1137,6 +1515,14 @@ editorFontSelect.addEventListener("change", () => {
   applyEditorSettings();
   persistAll();
 });
+caretTypeSelect.addEventListener("change", () => {
+  state.caretType = caretTypeSelect.value === "bar" ? "bar" : "block";
+  applyEditorSettings();
+  persistAll();
+});
+markdownPreviewBtn.addEventListener("click", () => {
+  setMarkdownPreview(!markdownPreviewMode);
+});
 saveDelayInput.addEventListener("change", () => {
   const delaySeconds = saveDelayInput.valueAsNumber;
   if (!saveDelayInput.checkValidity() || !Number.isInteger(delaySeconds) || delaySeconds < 0 || delaySeconds > MAX_SAVE_DELAY_SECONDS) {
@@ -1170,6 +1556,32 @@ fileListEl.addEventListener("click", (e) => {
   } else {
     selectFile(link.dataset.path);
   }
+});
+lineGutterLines.addEventListener("click", (e) => {
+  const button = e.target.closest("button[data-fold-line]");
+  if (!button || button.disabled || activeMode !== "code" && activeMode !== "markdown")
+    return;
+  const line = Number(button.dataset.foldLine);
+  let source = getEditorValue();
+  let caret = getCaretOffset();
+  if (activeMode === "markdown" && !foldedLineStarts.has(line) && getMarkdownFoldRanges(source).get(line) === source.split(`
+`).length && (source.split(`
+`).pop() ?? "").trim().length > 0) {
+    source += `
+`;
+    caret = source.length;
+    state.files[state.active] = source;
+    richEditor.innerHTML = renderRichEditorHtml(source);
+    scheduleSave();
+  }
+  if (foldedLineStarts.has(line))
+    foldedLineStarts.delete(line);
+  else
+    foldedLineStarts.add(line);
+  richEditor.innerHTML = renderRichEditorHtml(source);
+  richEditor.focus();
+  setCaretCharacterOffset(richEditor, caret);
+  refreshEditorStatus();
 });
 textEditor.addEventListener("keydown", (e) => {
   if (e.isComposing || e.ctrlKey || e.metaKey || e.altKey)

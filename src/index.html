@@ -31,10 +31,12 @@
         spellcheck="false"
         hidden
       ></div>
+      <div class="markdown-preview" id="markdownPreview" hidden></div>
       <div class="status-bar">
         <span class="cursor-status" id="cursorStatus">Ln 1, Col 1</span>
         <span class="syntax-status" id="syntaxStatus" aria-live="polite"></span>
         <span class="save-status" id="saveStatus" aria-live="polite">Saved</span>
+        <button type="button" class="new-btn markdown-preview-btn" id="markdownPreviewBtn" hidden>Preview</button>
         <button type="button" class="new-btn run-js-btn" id="runJsBtn" hidden>Run JS</button>
       </div>
     </div>
@@ -65,6 +67,14 @@
         <option value="jetbrains">JetBrains Mono</option>
       </select>
     </label>
+    <label class="settings-field" for="caretType">
+      <span>Caret type</span>
+      <select id="caretType">
+        <option value="block">Block</option>
+        <option value="bar">Bar</option>
+      </select>
+    </label>
+    <p class="settings-hint">Block caret styling is supported in Chromium-based browsers.</p>
     <label class="settings-field" for="saveDelaySeconds">
       <span>Auto-save delay (seconds)</span>
       <input type="number" id="saveDelaySeconds" min="0" max="86400" step="1">
@@ -74,6 +84,7 @@
 
   <div class="ctx-menu" id="ctxMenu"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
   <script type="module" src="app.ts"></script>
 </body>
 </html>
