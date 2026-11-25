@@ -776,7 +776,6 @@ function setEditorForFile(filePath, content) {
     textEditor.value = content;
   }
   editorWrap.classList.toggle("markdown-preview-mode", markdownPreviewMode);
-  editorWrap.classList.toggle("markdown-source", activeMode === "markdown" && !markdownPreviewMode);
   refreshEditorStatus();
 }
 function setMarkdownPreview(showPreview) {
@@ -784,7 +783,6 @@ function setMarkdownPreview(showPreview) {
     return;
   markdownPreviewMode = showPreview;
   editorWrap.classList.toggle("markdown-preview-mode", showPreview);
-  editorWrap.classList.toggle("markdown-source", !showPreview);
   markdownPreview.hidden = !showPreview;
   richEditor.hidden = showPreview;
   markdownPreviewBtn.textContent = showPreview ? "Edit" : "Preview";
@@ -833,7 +831,8 @@ function loadState(raw) {
     leftPaneWidth: DEFAULT_LEFT_PANE_WIDTH,
     darkTheme: false,
     saveDelaySeconds: DEFAULT_SAVE_DELAY_SECONDS,
-    lineNumbers: false,
+    lineNumbers: true,
+    lineNumbersPreferenceSet: false,
     editorFont: "system",
     caretType: DEFAULT_CARET_TYPE
   };
@@ -858,7 +857,8 @@ function loadState(raw) {
       leftPaneWidth: typeof raw.leftPaneWidth === "number" && Number.isFinite(raw.leftPaneWidth) ? raw.leftPaneWidth : DEFAULT_LEFT_PANE_WIDTH,
       darkTheme: raw.darkTheme === true,
       saveDelaySeconds: typeof raw.saveDelaySeconds === "number" && Number.isInteger(raw.saveDelaySeconds) && raw.saveDelaySeconds >= 0 && raw.saveDelaySeconds <= MAX_SAVE_DELAY_SECONDS ? raw.saveDelaySeconds : DEFAULT_SAVE_DELAY_SECONDS,
-      lineNumbers: raw.lineNumbers === true,
+      lineNumbers: raw.lineNumbersPreferenceSet === true ? raw.lineNumbers === true : true,
+      lineNumbersPreferenceSet: raw.lineNumbersPreferenceSet === true,
       editorFont: raw.editorFont === "jetbrains" ? "jetbrains" : "system",
       caretType: raw.caretType === "bar" ? "bar" : DEFAULT_CARET_TYPE
     };
@@ -1063,7 +1063,6 @@ function updateLineGutter(errorLine, errorMessage) {
 function refreshEditorStatus() {
   editorWrap.classList.toggle("code-folding", activeMode === "code" || activeMode === "markdown");
   editorWrap.classList.toggle("markdown-preview-mode", activeMode === "markdown" && markdownPreviewMode);
-  editorWrap.classList.toggle("markdown-source", activeMode === "markdown" && !markdownPreviewMode);
   const isJavaScript = isJavaScriptFile();
   runJsBtn.hidden = !isJavaScript;
   markdownPreviewBtn.hidden = activeMode !== "markdown";
@@ -1142,6 +1141,7 @@ function persistAll(showSavedStatus = false) {
     darkTheme: state.darkTheme,
     saveDelaySeconds: state.saveDelaySeconds,
     lineNumbers: state.lineNumbers,
+    lineNumbersPreferenceSet: state.lineNumbersPreferenceSet,
     editorFont: state.editorFont,
     caretType: state.caretType
   };
@@ -1507,6 +1507,7 @@ darkThemeToggle.addEventListener("change", () => {
 });
 lineNumbersToggle.addEventListener("change", () => {
   state.lineNumbers = lineNumbersToggle.checked;
+  state.lineNumbersPreferenceSet = true;
   applyEditorSettings();
   persistAll();
 });

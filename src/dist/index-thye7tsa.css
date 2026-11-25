@@ -163,7 +163,7 @@ html, body {
 }
 
 @supports (caret-shape: block) {
-  .right-p {
+  .right-p, .rich-editor {
     caret-shape: var(--editor-caret-shape, block);
   }
 }
@@ -177,10 +177,7 @@ html, body {
   white-space: pre-wrap;
   word-wrap: break-word;
   tab-size: 2;
-}
-
-.editor-wrap.markdown-source .rich-editor, .editor-wrap.markdown-source .rich-editor * {
-  caret-color: #0969da;
+  caret-color: auto;
 }
 
 .markdown-preview {
@@ -447,8 +444,7 @@ html, body {
 }
 
 .md-fence {
-  color: #6e7781;
-  background: #f6f8fa;
+  color: #24292f;
 }
 
 .md-code-block {
@@ -671,10 +667,6 @@ body.dark-theme {
   color: #79c0ff;
 }
 
-.dark-theme .editor-wrap.markdown-source .rich-editor, .dark-theme .editor-wrap.markdown-source .rich-editor * {
-  caret-color: #79c0ff;
-}
-
 .dark-theme .new-btn {
   color: #d4d4d4;
   background: #333;
@@ -774,11 +766,11 @@ body.dark-theme {
   color: #f0f0f0;
 }
 
-.dark-theme .md-italic, .dark-theme .md-quote {
+.dark-theme .md-italic, .dark-theme .md-quote, .dark-theme .md-fence {
   color: #c9d1d9;
 }
 
-.dark-theme .md-code, .dark-theme .md-fence, .dark-theme .md-code-block {
+.dark-theme .md-code, .dark-theme .md-code-block {
   background: #2d2d2d;
 }
 

@@ -32,6 +32,7 @@ interface AppState {
   darkTheme: boolean;
   saveDelaySeconds: number;
   lineNumbers: boolean;
+  lineNumbersPreferenceSet: boolean;
   editorFont: 'system' | 'jetbrains';
   caretType: 'block' | 'bar';
 }
@@ -831,7 +832,6 @@ function setEditorForFile(filePath: string, content: string): void {
     textEditor.value = content;
   }
   editorWrap.classList.toggle('markdown-preview-mode', markdownPreviewMode);
-  editorWrap.classList.toggle('markdown-source', activeMode === 'markdown' && !markdownPreviewMode);
   refreshEditorStatus();
 }
 
@@ -839,7 +839,6 @@ function setMarkdownPreview(showPreview: boolean): void {
   if (activeMode !== 'markdown') return;
   markdownPreviewMode = showPreview;
   editorWrap.classList.toggle('markdown-preview-mode', showPreview);
-  editorWrap.classList.toggle('markdown-source', !showPreview);
   markdownPreview.hidden = !showPreview;
   richEditor.hidden = showPreview;
   markdownPreviewBtn.textContent = showPreview ? 'Edit' : 'Preview';
@@ -894,7 +893,8 @@ function loadState(raw: unknown): AppState {
     leftPaneWidth: DEFAULT_LEFT_PANE_WIDTH,
     darkTheme: false,
     saveDelaySeconds: DEFAULT_SAVE_DELAY_SECONDS,
-    lineNumbers: false,
+    lineNumbers: true,
+    lineNumbersPreferenceSet: false,
     editorFont: 'system',
     caretType: DEFAULT_CARET_TYPE,
   };
@@ -929,7 +929,10 @@ function loadState(raw: unknown): AppState {
         raw.saveDelaySeconds <= MAX_SAVE_DELAY_SECONDS
         ? raw.saveDelaySeconds
         : DEFAULT_SAVE_DELAY_SECONDS,
-      lineNumbers: raw.lineNumbers === true,
+      lineNumbers: raw.lineNumbersPreferenceSet === true
+        ? raw.lineNumbers === true
+        : true,
+      lineNumbersPreferenceSet: raw.lineNumbersPreferenceSet === true,
       editorFont: raw.editorFont === 'jetbrains' ? 'jetbrains' : 'system',
       caretType: raw.caretType === 'bar' ? 'bar' : DEFAULT_CARET_TYPE,
     };
@@ -1167,7 +1170,6 @@ function updateLineGutter(errorLine: number | null, errorMessage: string | null)
 function refreshEditorStatus(): void {
   editorWrap.classList.toggle('code-folding', activeMode === 'code' || activeMode === 'markdown');
   editorWrap.classList.toggle('markdown-preview-mode', activeMode === 'markdown' && markdownPreviewMode);
-  editorWrap.classList.toggle('markdown-source', activeMode === 'markdown' && !markdownPreviewMode);
   const isJavaScript = isJavaScriptFile();
   runJsBtn.hidden = !isJavaScript;
   markdownPreviewBtn.hidden = activeMode !== 'markdown';
@@ -1251,6 +1253,7 @@ function persistAll(showSavedStatus = false): void {
     darkTheme: state.darkTheme,
     saveDelaySeconds: state.saveDelaySeconds,
     lineNumbers: state.lineNumbers,
+    lineNumbersPreferenceSet: state.lineNumbersPreferenceSet,
     editorFont: state.editorFont,
     caretType: state.caretType,
   };
@@ -1652,6 +1655,7 @@ darkThemeToggle.addEventListener('change', () => {
 });
 lineNumbersToggle.addEventListener('change', () => {
   state.lineNumbers = lineNumbersToggle.checked;
+  state.lineNumbersPreferenceSet = true;
   applyEditorSettings();
   persistAll();
 });
