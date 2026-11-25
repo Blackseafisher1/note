@@ -1,0 +1,125 @@
+{
+  "languages": [
+    {
+      "id": "java",
+      "extensions": ["java"],
+      "aliases": ["Java"],
+      "rules": [
+        { "pattern": "//[^\\n]*|/\\*[\\s\\S]*?\\*/", "scope": "comment" },
+        { "pattern": "\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'", "scope": "string" },
+        { "pattern": "@[A-Za-z_$][\\w$]*", "scope": "annotation" },
+        { "pattern": "\\b(?:abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while|var|record|sealed|permits)\\b", "scope": "keyword" },
+        { "pattern": "\\b(?:true|false|null)\\b", "scope": "boolean" },
+        { "pattern": "\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?[fFdDlL]?\\b", "scope": "number" },
+        { "pattern": "\\b[A-Za-z_$][\\w$]*(?=\\s*\\()", "scope": "function" },
+        { "pattern": "\\b[A-Z][A-Z0-9_]{1,}\\b", "scope": "constant" },
+        { "pattern": "\\b[A-Z][A-Za-z0-9_$]*\\b", "scope": "type" },
+        { "pattern": "[{}()[\\].,;]", "scope": "punctuation" },
+        { "pattern": "==|!=|<=|>=|\\+\\+|--|&&|\\|\\||\\+=|-=|\\*=|/=|->|::|[+*/%=&|!<>?:~-]", "scope": "operator" }
+      ]
+    },
+    {
+      "id": "javascript",
+      "extensions": ["js", "mjs", "cjs"],
+      "aliases": ["javascript", "js", "node"],
+      "rules": [
+        { "pattern": "//[^\\n]*|/\\*[\\s\\S]*?\\*/", "scope": "comment" },
+        { "pattern": "`(?:\\\\.|[^`\\\\])*`|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'", "scope": "string" },
+        { "pattern": "\\b(?:async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|finally|for|from|function|if|import|in|instanceof|let|new|of|return|static|super|switch|this|throw|try|typeof|var|void|while|with|yield)\\b", "scope": "keyword" },
+        { "pattern": "\\b(?:true|false|null|undefined|NaN|Infinity)\\b", "scope": "boolean" },
+        { "pattern": "\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?n?\\b", "scope": "number" },
+        { "pattern": "\\b[A-Za-z_$][\\w$]*(?=\\s*\\()", "scope": "function" },
+        { "pattern": "\\b[A-Z][A-Za-z0-9_$]*\\b", "scope": "type" },
+        { "pattern": "[{}()[\\].,;]", "scope": "punctuation" },
+        { "pattern": "===|!==|=>|==|!=|<=|>=|\\+\\+|--|&&|\\|\\||\\?\\?|\\+=|-=|\\*=|/=|[+*/%=&|!<>?:~-]", "scope": "operator" }
+      ]
+    },
+    {
+      "id": "typescript",
+      "extensions": ["ts", "tsx"],
+      "aliases": ["typescript", "ts"],
+      "rules": [
+        { "pattern": "//[^\\n]*|/\\*[\\s\\S]*?\\*/", "scope": "comment" },
+        { "pattern": "`(?:\\\\.|[^`\\\\])*`|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'", "scope": "string" },
+        { "pattern": "\\b(?:abstract|any|as|asserts|async|await|boolean|break|case|catch|class|const|constructor|continue|declare|default|delete|do|else|enum|export|extends|false|finally|for|from|function|get|if|implements|import|in|infer|instanceof|interface|keyof|let|module|namespace|never|new|null|number|object|of|package|private|protected|public|readonly|return|require|set|static|string|super|switch|symbol|this|throw|try|type|typeof|undefined|unique|unknown|var|void|while|with|yield)\\b", "scope": "keyword" },
+        { "pattern": "\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?n?\\b", "scope": "number" },
+        { "pattern": "\\b[A-Za-z_$][\\w$]*(?=\\s*\\()", "scope": "function" },
+        { "pattern": "\\b[A-Z][A-Za-z0-9_$]*\\b", "scope": "type" },
+        { "pattern": "[{}()[\\].,;]", "scope": "punctuation" },
+        { "pattern": "===|!==|=>|==|!=|<=|>=|\\+\\+|--|&&|\\|\\||\\?\\?|\\+=|-=|\\*=|/=|[+*/%=&|!<>?:~-]", "scope": "operator" }
+      ]
+    },
+    {
+      "id": "python",
+      "extensions": ["py", "pyw"],
+      "aliases": ["python", "py"],
+      "rules": [
+        { "pattern": "#[^\\n]*", "scope": "comment" },
+        { "pattern": "(?:[rRuUbBfF]{0,2})(?:\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*')", "scope": "string" },
+        { "pattern": "\\b(?:and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\\b", "scope": "keyword" },
+        { "pattern": "\\b(?:True|False|None)\\b", "scope": "boolean" },
+        { "pattern": "\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?j?\\b", "scope": "number" },
+        { "pattern": "\\b[A-Za-z_][\\w]*(?=\\s*\\()", "scope": "function" },
+        { "pattern": "\\b[A-Z][A-Za-z0-9_]*\\b", "scope": "type" },
+        { "pattern": "[{}()[\\].,;:]", "scope": "punctuation" },
+        { "pattern": "\\*\\*|//|==|!=|<=|>=|[-+*/%=&|!<>^~]", "scope": "operator" }
+      ]
+    },
+    {
+      "id": "json",
+      "extensions": ["json"],
+      "aliases": ["jsonc"],
+      "rules": [
+        { "pattern": "\"(?:\\\\.|[^\"\\\\])*\"(?=\\s*:)", "scope": "property" },
+        { "pattern": "\"(?:\\\\.|[^\"\\\\])*\"", "scope": "string" },
+        { "pattern": "\\b(?:true|false|null)\\b", "scope": "boolean" },
+        { "pattern": "-?\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b", "scope": "number" },
+        { "pattern": "[{}()[\\].,]", "scope": "punctuation" }
+      ]
+    },
+    {
+      "id": "css",
+      "extensions": ["css"],
+      "aliases": ["css"],
+      "rules": [
+        { "pattern": "/\\*[\\s\\S]*?\\*/", "scope": "comment" },
+        { "pattern": "\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'", "scope": "string" },
+        { "pattern": "@[A-Za-z-]+", "scope": "keyword" },
+        { "pattern": "#[A-Za-z0-9_-]+|\\.[A-Za-z_-][\\w-]*", "scope": "selector" },
+        { "pattern": "\\b(?:important|inherit|initial|unset|auto|none|block|flex|grid|absolute|relative|fixed)\\b", "scope": "keyword" },
+        { "pattern": "\\b\\d+(?:\\.\\d+)?(?:px|em|rem|vh|vw|%|s|ms|deg)?\\b", "scope": "number" },
+        { "pattern": "[{}()[\\].,:;]", "scope": "punctuation" },
+        { "pattern": "[-+*/=<>]", "scope": "operator" }
+      ]
+    },
+    {
+      "id": "sql",
+      "extensions": ["sql"],
+      "aliases": ["sql", "mysql", "postgres", "postgresql", "sqlite", "plsql"],
+      "rules": [
+        { "pattern": "--[^\\n]*|/\\*[\\s\\S]*?\\*/", "scope": "comment" },
+        { "pattern": "'(?:''|\\\\.|[^'\\\\])*'|\"(?:\"\"|\\\\.|[^\"\\\\])*\"|`(?:``|[^`])*`", "scope": "string" },
+        { "pattern": "\\b(?:bigint|bigserial|binary|bit|blob|boolean|char|character|date|datetime|decimal|double|float|int|integer|json|numeric|real|serial|smallint|text|time|timestamp|uuid|varchar)\\b", "scope": "type", "patternFlags": "i" },
+        { "pattern": "\\b(?:all|alter|and|any|as|asc|begin|between|by|case|cast|check|column|commit|constraint|create|cross|database|default|delete|desc|distinct|drop|else|end|except|exists|fetch|for|foreign|from|full|grant|group|having|if|in|index|inner|insert|intersect|into|is|join|key|left|like|limit|not|offset|on|or|order|outer|over|partition|primary|procedure|references|return|right|rollback|row|rows|select|set|table|then|truncate|union|unique|update|using|values|view|when|where|with)\\b", "scope": "keyword", "patternFlags": "i" },
+        { "pattern": "\\b(?:true|false|null|unknown)\\b", "scope": "boolean", "patternFlags": "i" },
+        { "pattern": "\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b", "scope": "number" },
+        { "pattern": "\\b[A-Za-z_][\\w$]*(?=\\s*\\()", "scope": "function", "patternFlags": "i" },
+        { "pattern": "[@:][A-Za-z_][\\w$]*", "scope": "property" },
+        { "pattern": "[()[\\].,;]", "scope": "punctuation" },
+        { "pattern": "::|:=|<=|>=|<>|!=|==|\\|\\||->>|->|[-+*/%<>=~^|&]", "scope": "operator" }
+      ]
+    },
+    {
+      "id": "html",
+      "extensions": ["html", "htm"],
+      "aliases": ["html", "xml", "svg"],
+      "rules": [
+        { "pattern": "<!--[\\s\\S]*?-->", "scope": "comment" },
+        { "pattern": "\"[^\"]*\"|'[^']*'", "scope": "string" },
+        { "pattern": "</?[A-Za-z][A-Za-z0-9:-]*", "scope": "tag" },
+        { "pattern": "\\b[A-Za-z_:][\\w:.-]*(?=\\s*=)", "scope": "attribute" },
+        { "pattern": "/?>", "scope": "punctuation" }
+      ]
+    }
+  ]
+}

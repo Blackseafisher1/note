@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notes</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="split-con">
+    <div class="left-p" id="leftPane">
+      <div class="toolbar">
+        <button type="button" class="new-btn" id="newFileBtn">+ File</button>
+        <button type="button" class="new-btn" id="newFolderBtn">+ Folder</button>
+        <button type="button" class="new-btn" id="settingsBtn">Settings</button>
+      </div>
+      <ul id="fileList"></ul>
+    </div>
+
+    <div class="drag-strip" id="dragStrip" title="Drag to resize"></div>
+
+    <div class="editor-wrap">
+      <div class="line-gutter" id="lineGutter" aria-hidden="true">
+        <div id="lineGutterLines"></div>
+      </div>
+      <textarea class="right-p" name="text" id="textEditor" spellcheck="false"></textarea>
+      <div
+        class="right-p rich-editor"
+        id="richEditor"
+        contenteditable="true"
+        spellcheck="false"
+        hidden
+      ></div>
+      <div class="status-bar">
+        <span class="cursor-status" id="cursorStatus">Ln 1, Col 1</span>
+        <span class="syntax-status" id="syntaxStatus" aria-live="polite"></span>
+        <span class="save-status" id="saveStatus" aria-live="polite">Saved</span>
+        <button type="button" class="new-btn run-js-btn" id="runJsBtn" hidden>Run JS</button>
+      </div>
+    </div>
+  </div>
+
+  <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="settings-header">
+      <h2 id="settingsTitle">Settings</h2>
+      <button
+        type="button"
+        class="new-btn"
+        id="settingsCloseBtn"
+        aria-label="Close settings"
+      >Close</button>
+    </div>
+    <label class="settings-option" for="darkThemeToggle">
+      <input type="checkbox" id="darkThemeToggle">
+      <span>Dark theme</span>
+    </label>
+    <label class="settings-option" for="lineNumbersToggle">
+      <input type="checkbox" id="lineNumbersToggle">
+      <span>Show line numbers</span>
+    </label>
+    <label class="settings-field" for="editorFont">
+      <span>Editor font</span>
+      <select id="editorFont">
+        <option value="system">Built-in monospace</option>
+        <option value="jetbrains">JetBrains Mono</option>
+      </select>
+    </label>
+    <label class="settings-field" for="saveDelaySeconds">
+      <span>Auto-save delay (seconds)</span>
+      <input type="number" id="saveDelaySeconds" min="0" max="86400" step="1">
+    </label>
+    <p class="settings-hint">Set to 0 to turn off auto-save. Use Ctrl+S or Cmd+S to save manually.</p>
+  </dialog>
+
+  <div class="ctx-menu" id="ctxMenu"></div>
+
+  <script type="module" src="app.ts"></script>
+</body>
+</html>
